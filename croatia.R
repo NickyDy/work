@@ -9,10 +9,10 @@ comp <- rgfi %>%
   select(pla_13, pla_11, liabilities_a7) %>% 
   mutate(comp = pla_13 == pla_11)
 
-comp %>% count(comp)
+rps %>% filter(mb == 3586243, rb == 0000) %>% view
 
-glimpse(rgfi_2023)
-rps %>% count(oblik_vlasništva, sort = T)
+glimpse(rps)
+rps %>% count(rb, mb, sort = T) %>% view
 
 rgfi_year_na <- rgfi %>% 
   reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>% 

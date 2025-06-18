@@ -1,6 +1,6 @@
 library(tidyverse)
 library(nanoparquet)
-library(readxl)
+#library(readxl)
 library(scales)
 
 options(scipen = 100)
@@ -17,48 +17,53 @@ space_s <- function (x, accuracy = NULL, scale = 1, prefix = "", suffix = "",
          trim = trim, ...)
 }
 
-programs <- read_parquet("work/programs.parquet")
 projects_df <- read_parquet("work/projects_df.parquet") %>% janitor::clean_names() %>% distinct()
+programs <- read_parquet("work/programs.parquet")
+contracts <- read_parquet("work/contracts.parquet")
+entities <- read_parquet("work/entities.parquet")
 
-glimpse(programs)
+glimpse(entities)
 
-programs %>% count(end_date_p, sort = T) %>% view
+entities %>% filter(is.na(entity_city)) %>% view
+
+entities %>% count(entity_uin, sort = T) %>% view
 
 projects_df <- left_join(projects_df, projects_xml, by = c("Номер на проектно предложение" = "project_id"))
 
-projects_df %>% count(programa, sort = T) %>% view
+programs %>% count(programa, sort = T) %>% view
 projects_df %>% filter(Местонахождение == "гр.Ямбол") %>% 
   mutate(Бенефициент = str_to_upper(Бенефициент)) %>% 
   count(Бенефициент, `Номер на проектно предложение`, wt = `Реално изплатени суми`) %>% view
 
-no <- "BG-RRP-1.001-0002"
+no <- "BGENVIRONMENT-4.004-0013"
 
-title <- projects_df %>% filter(`Номер на проектно предложение` %in% c(no))
+title <- programs %>% filter(nomer_na_proektno_predlozenie %in% c(no))
 
-projects_df %>% 
-  filter(`Номер на проектно предложение` %in% c(no)) %>%
-  pivot_longer(`Обща стойност`:`Реално изплатени суми`) %>%
+programs %>% 
+  filter(nomer_na_proektno_predlozenie %in% c(no)) %>%
+  pivot_longer(obsa_stojnost:realno_izplateni_sumi) %>%
   mutate(col = value > 0, name = fct_inorder(name)) %>% 
   ggplot(aes(value, name, fill = col)) +
   geom_col(show.legend = F) +
-  geom_text(aes(label = paste0(space_s(value), " лв")), hjust = -0.05, size = 4) +
+  geom_text(aes(label = paste0(space_s(value))), hjust = -0.05, size = 4) +
   scale_x_continuous(expand = expansion(mult = c(0.01, 0.1))) +
+  scale_y_discrete(labels = c("Обща стойност", "БФБ", "Собствено финансиране", "Реално изплатени суми")) +
   scale_fill_manual(values = c("TRUE" = "#00BFC4", "FALSE" = "#F8766D")) +
   theme(text = element_text(size = 16), axis.ticks.x = element_blank(),
         axis.text.x = element_blank()) +
   labs(x = "Изплатена сума (лв)", y = NULL,
-       title = paste0("Бенефициент: ",  title$Бенефициент,"\n",
-                      "Име на проект: ", str_wrap(title$`Наименование на проекта`, width = 100),"\n",
-                      "Номер на проект: ", title$`Номер на проектно предложение`,"\n",
-                      #"Начална дата: ", title,"\n",
-                      #"Крайна дата: ", title$end_date,"\n",
-                      "Продължителност в месеци: ", title$`Продължителност (месеци)`))
+       title = paste0("Бенефициент: ",  title$beneficient,"\n",
+                      "Име на проект: ", str_wrap(title$naimenovanie_na_proekta, width = 120),"\n",
+                      "Номер на проект: ", title$nomer_na_proektno_predlozenie,"\n",
+                      "Начална дата: ", title$initial_date_p,"\n",
+                      "Крайна дата: ", title$end_date_p,"\n",
+                      "Продължителност в месеци: ", title$prod_lzitelnost_meseci))
 
 programi %>% count(nomer_na_proektno_predlozenie, sort = T) %>% view
 glimpse(projects_df)
 
-write_parquet(programs, "work/programs.parquet")
-write_csv(programs, "work/programs.csv")
+write_parquet(entities, "work/entities.parquet")
+write_csv(entities, "work/entities.csv")
 #-----------------------------------------------------
 transport <- read_excel("work/transport.xlsx") %>% 
   mutate(across(c(1:9, 15), as.character)) %>% mutate(across(10:14, as.numeric))
@@ -363,3 +368,25 @@ programi <- bind_rows(transport_df, okolna_sreda_df, regioni_v_rastej_df, inovac
   mutate(ЕИК = str_extract(Бенефициент, "^\\d+"), .before = Бенефициент) %>% 
   mutate(Бенефициент = str_remove(Бенефициент, "^\\d+"),
          Бенефициент = str_squish(Бенефициент)) %>% distinct()
+
+programs <- read_parquet("work/programs.parquet") %>% distinct(programa, eik, beneficient, 
+                                                               tip_na_organizaciata, vid_na_organizaciata, 
+                                                               forma_na_organizaciata, sedalise, mestonahozdenie, 
+                                                               nomer_na_proektno_predlozenie, naimenovanie_na_proekta, 
+                                                               prod_lzitelnost_meseci, 
+                                                               status_na_izp_lnenie_na_dogovora_zapovedta_za_bfp, 
+                                                               initial_date_p, end_date_p, .keep_all = T)
+programs %>% 
+  summarise(obsa_stojnost = max(obsa_stojnost),
+            bfp = max(bfp),
+            realno_izplateni_sumi = max(realno_izplateni_sumi),
+            sobstveno_s_finansirane_ot_beneficienta = max(sobstveno_s_finansirane_ot_beneficienta),
+            .by = c(programa, eik, beneficient, 
+                    tip_na_organizaciata, vid_na_organizaciata, 
+                    forma_na_organizaciata, sedalise, mestonahozdenie, 
+                    nomer_na_proektno_predlozenie, naimenovanie_na_proekta, 
+                    prod_lzitelnost_meseci, 
+                    status_na_izp_lnenie_na_dogovora_zapovedta_za_bfp, 
+                    initial_date_p, end_date_p)) %>% view
+
+glimpse(programs)

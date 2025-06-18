@@ -1,99 +1,104 @@
 library(tidyverse)
 library(xml2)
+library(nanoparquet)
+options(scipen = 100)
 
-xml <- read_xml('work/xml/2021BG-RRP Национален план за възстановяване и устойчивост.xml')
-
-#PROJECTS
-project_id <- xml_text(xml_find_all(xml, ".//Project/Id"))
-# source_funding <- xml_text(xml_find_all(xml, ".//Project/SourceofFunding"))
-initial_date_p <- xml_text(xml_find_all(xml, ".//Project/InitialDate"))
-end_date_p <- xml_text(xml_find_all(xml, ".//Project/EndDate"))
-# decision_date <- xml_text(xml_find_all(xml, ".//Project/DateofDecisionforFunding"))
-# project_beneficiary <- xml_text(xml_find_all(xml, ".//Project/ProjectBeneficiary"))
-# project_name <- xml_text(xml_find_all(xml, ".//Project/Name"))
-# total_value <- xml_text(xml_find_all(xml, ".//Project/TotalValue"))
-# beneficiary_funding <- xml_text(xml_find_all(xml, ".//Project/BeneficiaryFunding"))
-# actually_paid_amounts <- xml_text(xml_find_all(xml, ".//Project/ActuallyPaidAmounts"))
-# duration_months <- xml_text(xml_find_all(xml, ".//Project/DurationInMonths"))
-# project_description <- xml_text(xml_find_all(xml, ".//Project/Description"))
-# status <- xml_text(xml_find_all(xml, ".//Project/Status"))
-
-projects_xml <- tibble(project_id, initial_date_p, end_date_p) %>%
-  mutate(initial_date_p = ymd_hms(initial_date_p),
-         end_date_p = ymd_hms(end_date_p)) %>% 
-  distinct()
-
-df <- projects_df %>% filter(programa == '2021BG14MFPR001 Програма за морско дело, рибарство и аквакултури 2021-2027 г.') %>% 
-  left_join(., projects_xml, by = c("nomer_na_proektno_predlozenie" = "project_id"))
-
-glimpse(df)
-
-write_csv(df, 'work/2021BG14MFPR001 Програма за морско дело, рибарство и аквакултури 2021-2027.csv')
-
-#CONTRACTS
-entity_id <- xml_text(xml_find_all(xml, ".//Contract/EntityId"))
-contract_id <- xml_text(xml_find_all(xml, ".//Contract/ContractId"))
-signature_date <- xml_text(xml_find_all(xml, ".//Contract/SignatureDate"))
-initial_date_c <- xml_text(xml_find_all(xml, ".//Contract/InitialDate"))
-end_date_c <- xml_text(xml_find_all(xml, ".//Contract/EndDate"))
-entity_description <- xml_text(xml_find_all(xml, ".//Contract/Description"))
-amount <- xml_text(xml_find_all(xml, ".//Contract/Amount"))
-
-#ENTITIES
-# entity_entity_id <- xml_text(xml_find_all(xml, ".//Entity/EntityId"))
-# entity_uin <- xml_text(xml_find_all(xml, ".//Entity/EntityUin"))
-# entity_name <- xml_text(xml_find_all(xml, ".//Entity/EntityName"))
-# entity_zip_code <- xml_text(xml_find_all(xml, ".//Entity/EntityZipCode"))
-# entity_city <- xml_text(xml_find_all(xml, ".//Entity/EntityCity"))
-# entity_mun <- xml_text(xml_find_all(xml, ".//Entity/EntityMunicipality"))
-# entity_district <- xml_text(xml_find_all(xml, ".//Entity/EntityDistrict"))
-
-contractors_xml <- tibble(contract_id, signature_date, initial_date_c, end_date_c, 
-                          amount) %>%
-  mutate(initial_date_c = ymd_hms(initial_date_c),
-         end_date_c = ymd_hms(end_date_c),
-         amount = as.numeric(amount)) %>% 
-  mutate(project_id = str_sub(contract_id, start = 1L, end = 22L),
-         contract_id = str_sub(contract_id, start = 23L, end = 100)) %>%
-  select(project_id, contract_id, everything()) %>% distinct()
-
-glimpse(xmls)
+#xml <- read_xml('work/xml/2014BG05M2OP001 Наука и образование за интелигентен растеж.xml')
+entities <- read_parquet("work/entities.parquet")
 
 library(fs)
 files <- dir_ls("work/xml", glob = "*.xml")
-
-read_entity <- function(files) ({
+#PROJECTS--------------------------
+read_projects <- function(files) ({
   
   xml <- read_xml(files)
   
-  entity_id <- xml_text(xml_find_all(xml, ".//Contract/EntityId"))
-  contract_id <- xml_text(xml_find_all(xml, ".//Contract/ContractId"))
-  signature_date <- xml_text(xml_find_all(xml, ".//Contract/SignatureDate"))
-  initial_date_c <- xml_text(xml_find_all(xml, ".//Contract/InitialDate"))
-  end_date_c <- xml_text(xml_find_all(xml, ".//Contract/EndDate"))
-  #entity_description <- xml_text(xml_find_all(xml, ".//Contract/Description"))
-  amount <- xml_text(xml_find_all(xml, ".//Contract/Amount"))
+  projects <- xml %>% 
+    xml_find_all(".//Projects/Project")
   
-contractors_xml <- tibble(contract_id, signature_date,
-                          #entity_description,
-                          initial_date_c, end_date_c, amount) %>%
-    mutate(initial_date_c = ymd_hms(initial_date_c),
-           end_date_c = ymd_hms(end_date_c),
-           signature_date = ymd_hms(signature_date),
-           amount = as.numeric(amount)) %>% 
-    mutate(project_id = str_sub(contract_id, start = 1L, end = 22L),
-           contract_id = str_sub(contract_id, start = 23L, end = 100)) %>%
-  select(project_id, contract_id, everything()) %>% distinct()
+tibble(
+  project_id = xml_find_first(projects, ".//Id") %>% xml_text(),
+  source_of_funding = xml_find_first(projects, ".//SourceofFunding") %>% xml_text(),
+  initial_date_p = xml_find_first(projects, ".//InitialDate") %>% xml_text(),
+  end_date_p = xml_find_first(projects, ".//EndDate") %>% xml_text(),
+  #date_of_decision_for_funding = xml_find_first(projects, ".//DateofDecisionforFunding") %>% xml_text(),
+  #project_beneficiary = xml_find_first(projects, ".//ProjectBeneficiary") %>% xml_text(),
+  # name = xml_find_first(projects, ".//Name") %>% xml_text(),
+  # total_value = xml_find_first(projects, ".//TotalValue") %>% xml_text(),
+  #beneficiary_funding = xml_find_first(projects, ".//BeneficiaryFunding") %>% xml_text(),
+  #actually_paid_amounts = xml_find_first(projects, ".//ActuallyPaidAmounts/ActuallyPaidAmount/Value") %>% xml_text(),
+  # duration_months = xml_find_first(projects, ".//DurationInMonths") %>% xml_text(),
+  descripton = xml_find_first(projects, ".//Description") %>% xml_text(),
+  # status = xml_find_first(projects, ".//Status") %>% xml_text()
+)
 
 })
 
-contracts <- map(files, read_entity) %>% bind_rows()
+projects <- map(files, read_projects) %>% bind_rows() %>% distinct()
 
-contracts %>% map_dfr(~sum(is.na(.))) %>% view
+projects <- projects %>%
+  mutate(initial_date_p = ymd_hms(initial_date_p),
+         end_date_p = ymd_hms(end_date_p)) %>% distinct()
 
-contracts %>% count(project_id, contract_id, sort = T) %>% view
+projects <- projects_df %>% 
+  left_join(., projects, by = c("nomer_na_proektno_predlozenie" = "project_id"))
 
-contracts %>% filter(amount == 0)
+#CONTRACTS
+read_contracts <- function(files) ({
+  
+  xml <- read_xml(files)
+  
+  contracts <- xml %>% 
+    xml_find_all(".//Contracts/Contract")
+  
+  tibble(
+    entity_id = xml_find_first(contracts, ".//EntityId") %>% xml_text(),
+    contract_id = xml_find_first(contracts, ".//ContractId") %>% xml_text(),
+    signature_date = xml_find_first(contracts, ".//SignatureDate") %>% xml_text(),
+    initial_date_c = xml_find_first(contracts, ".//InitialDate") %>% xml_text(),
+    end_date_c = xml_find_first(contracts, ".//EndDate") %>% xml_text(),
+    #entity_description = xml_find_first(contracts, ".//Description") %>% xml_text(),
+    amount = xml_find_first(contracts, ".//Amount") %>% xml_text())
+  
+})
 
-glimpse(contracts)
+contracts <- map(files, read_contracts) %>% bind_rows() %>% distinct()
 
+contracts <- contracts %>% 
+  # mutate(project_id = str_extract(contract_id, "^.+(?=\\()")) %>%
+  # mutate(contract_id = str_extract(contract_id, "(?<=\\().+$")) %>%
+  # mutate(contract_id = str_remove_all(contract_id, "\\(|\\)")) %>% 
+  # mutate(project_id = str_remove(project_id, "\\(|\\(.+")) %>% 
+  # select(project_id, contract_id, everything()) %>% 
+  mutate(across(signature_date:end_date_c, ymd_hms)) %>% 
+  mutate(amount = as.numeric(amount))
+
+#ENTITIES
+read_entities <- function(files) ({
+  
+xml <- read_xml(files)
+  
+entities <- xml %>% 
+  xml_find_all(".//Entities/Entity")
+
+tibble(
+  entity_id = xml_find_first(entities, ".//EntityId") %>% xml_text(),
+  entity_uin = xml_find_first(entities, ".//EntityUin") %>% xml_text(),
+  entity_name = xml_find_first(entities, ".//EntityName") %>% xml_text(), 
+  entity_zip_code = xml_find_first(entities, ".//EntityZipCode") %>% xml_text(),
+  entity_city = xml_find_first(entities, ".//EntityCity") %>% xml_text(),
+  entity_mun = xml_find_first(entities, ".//EntityMunicipality") %>% xml_text(), 
+  entity_district = xml_find_first(entities, ".//EntityDistrict") %>% xml_text())
+
+})
+
+entities <- map(files, read_entities) %>% bind_rows() %>% distinct()
+#-------------------------------------------------------------------
+entities %>% map_dfr(~sum(is.na(.))) %>% view
+
+glimpse(entities)
+
+contracts %>% distinct()
+
+write_csv(entities, "work/entities.csv")
+write_parquet(entities, "work/entities.parquet")

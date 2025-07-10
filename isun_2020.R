@@ -17,10 +17,10 @@ space_s <- function (x, accuracy = NULL, scale = 1, prefix = "", suffix = "",
          trim = trim, ...)
 }
 
-projects_df <- read_parquet("work/projects_df.parquet") %>% janitor::clean_names() %>% distinct()
-programs <- read_parquet("work/programs.parquet")
-contracts <- read_parquet("work/contracts.parquet")
-entities <- read_parquet("work/entities.parquet")
+projects_df <- read_parquet("work/parquet/projects_df.parquet") %>% janitor::clean_names() %>% distinct()
+programs <- read_parquet("work/parquet/programs.parquet")
+contracts <- read_parquet("work/parquet/contracts.parquet")
+entities <- read_parquet("work/parquet/entities.parquet")
 
 glimpse(entities)
 

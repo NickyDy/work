@@ -1,13 +1,21 @@
 library(tidyverse)
-library(xml2)
 library(nanoparquet)
+library(xml2)
 options(scipen = 100)
 
 #xml <- read_xml('work/xml/2014BG05M2OP001 Наука и образование за интелигентен растеж.xml')
+programs <- read_parquet("work/programs.parquet")
+contracts <- read_parquet("work/contracts.parquet")
 entities <- read_parquet("work/entities.parquet")
+
+write_parquet(entities, "work/entities.parquet")
+
+glimpse(entities)
+entities %>% count(programa, entity_uin, sort = T) %>% view
 
 library(fs)
 files <- dir_ls("work/xml", glob = "*.xml")
+paths <- list.files("work/xml", pattern = "[.]xml$")
 #PROJECTS--------------------------
 read_projects <- function(files) ({
   
@@ -92,7 +100,13 @@ tibble(
 
 })
 
-entities <- map(files, read_entities) %>% bind_rows() %>% distinct()
+entities <- map(files, read_entities) %>% 
+  set_names(basename) %>% 
+  list_rbind(names_to = "programa") %>% 
+  distinct()
+
+entities <- entities %>% 
+  mutate(programa = str_remove(programa, ".xml$"))
 #-------------------------------------------------------------------
 entities %>% map_dfr(~sum(is.na(.))) %>% view
 

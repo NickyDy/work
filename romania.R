@@ -1,14 +1,33 @@
 library(tidyverse)
 library(nanoparquet)
 library(fs)
+options(scipen = 100)
 
-web_bl <- read_parquet("work/romania/web_bl.parquet")
-web_ir <- read_parquet("work/romania/web_ir.parquet")
-web_uu <- read_parquet("work/romania/web_uu.parquet")
+web_bl <- read_parquet("work/parquet/web_bl.parquet")
+web_ir <- read_parquet("work/parquet/web_ir.parquet")
+web_uu <- read_parquet("work/parquet/web_uu.parquet")
 
 glimpse(web_bl)
 
-web_bl %>% count(patrimoniul_public) %>% view
+web_bl %>% count(year, wt = creante) %>% view
+
+plot_cui("8898684")
+
+plot_cui <- function(number) {
+
+title <- web_bl %>% 
+  filter(cui == number)
+
+web_bl %>% 
+  filter(cui == number) %>% 
+  pivot_longer(active_imobilizate:numar_mediu_de_salariati) %>% 
+  drop_na() %>%
+  mutate(col = value > 0, name = fct_inorder(name)) %>%
+  ggplot(aes(year, value, fill = col)) +
+  geom_col(show.legend = F) +
+  labs(title = paste0("CUI: ", unique(title$cui))) +
+  facet_wrap(vars(name), scales = "free_y", ncol = 3)
+}
 
 read_csv_cc <- function(file){
   read_csv(file, col_types = "cc")
@@ -21,6 +40,12 @@ web_bl <- map(files, read_csv_cc) %>%
   mutate(year = str_extract(filename, "\\d+")) %>% 
   select(year, cui:numar_mediu_de_salariati) %>% 
   distinct()
+
+web_bl_na <- web_bl %>%
+  map_dfr(~ sum(is.na(.))) %>% 
+  pivot_longer(everything()) %>%
+  mutate(perc_na = round(value / nrow(web_bl) * 100, 2)) %>% 
+  arrange(perc_na)
 
 web_bl_year_na <- web_bl %>% 
   reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>% 
@@ -41,6 +66,12 @@ web_ir <- map(files, read_csv_cc) %>%
   select(year, cui:patrimoniul_regiei) %>% 
   distinct()
 
+web_ir_na <- web_ir %>%
+  map_dfr(~ sum(is.na(.))) %>% 
+  pivot_longer(everything()) %>%
+  mutate(perc_na = round(value / nrow(web_ir) * 100, 2)) %>% 
+  arrange(perc_na)
+
 web_ir_year_na <- web_ir %>% 
   reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>% 
   as_tibble() %>%
@@ -59,6 +90,12 @@ web_uu <- map(files, read_csv_cc) %>%
   mutate(year = str_extract(filename, "\\d+")) %>% 
   select(year, cui:patrimoniul_regiei) %>% 
   distinct()
+
+web_uu_na <- web_uu %>%
+  map_dfr(~ sum(is.na(.))) %>% 
+  pivot_longer(everything()) %>%
+  mutate(perc_na = round(value / nrow(web_uu) * 100, 2)) %>% 
+  arrange(perc_na)
 
 web_uu_year_na <- web_uu %>% 
   reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>% 

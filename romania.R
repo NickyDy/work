@@ -3,141 +3,176 @@ library(nanoparquet)
 library(fs)
 options(scipen = 100)
 
-web_bl <- read_parquet("work/parquet/web_bl.parquet")
-web_ir <- read_parquet("work/parquet/web_ir.parquet")
-web_uu <- read_parquet("work/parquet/web_uu.parquet")
+web_bl <- read_parquet("work/web_bl.parquet")
+web_ir <- read_parquet("work/web_ir.parquet")
+web_uu <- read_parquet("work/web_uu.parquet")
 
-glimpse(web_bl)
+web <- bind_rows(web_bl, web_ir, web_uu)
 
-web_bl %>% count(year, wt = creante) %>% view
+glimpse(web)
 
-plot_cui("8898684")
+web_year_na <- web %>%
+  reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>%
+  as_tibble() %>%
+  pivot_longer(-year, names_to = "index", values_to = "perc_na") %>%
+  arrange(year, perc_na) %>%
+  select(index, year, perc_na) %>%
+  pivot_wider(names_from = year, values_from = perc_na)
+
+web_bl %>%
+  count(ro_pat_reg, cui) %>%
+  view()
+
+write_csv(web, "work/romania.csv")
+write_parquet(web, "work/romania.parquet")
+
+plot_cui("1108044")
 
 plot_cui <- function(number) {
+  title <- web_bl %>%
+    filter(cui == number)
 
-title <- web_bl %>% 
-  filter(cui == number)
-
-web_bl %>% 
-  filter(cui == number) %>% 
-  pivot_longer(active_imobilizate:numar_mediu_de_salariati) %>% 
-  drop_na() %>%
-  mutate(col = value > 0, name = fct_inorder(name)) %>%
-  ggplot(aes(year, value, fill = col)) +
-  geom_col(show.legend = F) +
-  labs(title = paste0("CUI: ", unique(title$cui))) +
-  facet_wrap(vars(name), scales = "free_y", ncol = 3)
+  web_bl %>%
+    filter(cui == number) %>%
+    pivot_longer(assets_b:employees) %>%
+    drop_na() %>%
+    mutate(col = value > 0, name = fct_inorder(name)) %>%
+    ggplot(aes(year, value, fill = col, group = name)) +
+    geom_point(show.legend = F) +
+    geom_line(linetype = 2, linewidth = 0.2) +
+    labs(title = paste0("CUI: ", unique(title$cui))) +
+    facet_wrap(vars(name), scales = "free_y", ncol = 3)
 }
 
-read_csv_cc <- function(file){
+read_csv_cc <- function(file) {
   read_csv(file, col_types = "cc")
 }
-#WEB_BL--------------------------------------
-files <- dir_ls("work/romania", regexp = "BL")
-web_bl <- map(files, read_csv_cc) %>% 
-  set_names(basename) %>% 
-  list_rbind(names_to = "filename") %>% 
-  mutate(year = str_extract(filename, "\\d+")) %>% 
-  select(year, cui:numar_mediu_de_salariati) %>% 
+# WEB_BL--------------------------------------
+files <- dir_ls("work/rom_txt", regexp = "bl")
+web_bl <- map(files, read_csv_cc) %>%
+  set_names(basename) %>%
+  list_rbind(names_to = "filename") %>%
+  mutate(year = str_extract(filename, "\\d+"), source = "BL") %>%
+  select(year, source, cui:numar_mediu_de_salariati) %>%
   distinct()
 
 web_bl_na <- web_bl %>%
-  map_dfr(~ sum(is.na(.))) %>% 
+  map_dfr(~ sum(is.na(.))) %>%
   pivot_longer(everything()) %>%
-  mutate(perc_na = round(value / nrow(web_bl) * 100, 2)) %>% 
+  mutate(perc_na = round(value / nrow(web_bl) * 100, 2)) %>%
   arrange(perc_na)
 
-web_bl_year_na <- web_bl %>% 
-  reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>% 
+web_bl_year_na <- web_bl %>%
+  reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>%
   as_tibble() %>%
-  pivot_longer(-year, names_to = "index", values_to = "perc_na") %>% 
+  pivot_longer(-year, names_to = "index", values_to = "perc_na") %>%
   arrange(year, perc_na) %>%
-  select(index, year, perc_na) %>% 
+  select(index, year, perc_na) %>%
   pivot_wider(names_from = year, values_from = perc_na)
 
-write_csv(web_bl, "work/romania/web_bl.csv")
-write_parquet(web_bl, "work/romania/web_bl.parquet")
-#WEB_IR--------------------------------------
-files <- dir_ls("work/romania", regexp = "IR")
-web_ir <- map(files, read_csv_cc) %>% 
-  set_names(basename) %>% 
-  list_rbind(names_to = "filename") %>% 
-  mutate(year = str_extract(filename, "\\d+")) %>% 
-  select(year, cui:patrimoniul_regiei) %>% 
+write_csv(web_bl, "work/web_bl.csv")
+write_parquet(web_bl, "work/web_bl.parquet")
+# WEB_IR--------------------------------------
+files <- dir_ls("work/rom_txt", regexp = "ir")
+web_ir <- map(files, read_csv_cc) %>%
+  set_names(basename) %>%
+  list_rbind(names_to = "filename") %>%
+  mutate(year = str_extract(filename, "\\d+"), source = "IR") %>%
+  select(year, source, cui:patrimoniul_regiei) %>%
   distinct()
 
 web_ir_na <- web_ir %>%
-  map_dfr(~ sum(is.na(.))) %>% 
+  map_dfr(~ sum(is.na(.))) %>%
   pivot_longer(everything()) %>%
-  mutate(perc_na = round(value / nrow(web_ir) * 100, 2)) %>% 
+  mutate(perc_na = round(value / nrow(web_ir) * 100, 2)) %>%
   arrange(perc_na)
 
-web_ir_year_na <- web_ir %>% 
-  reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>% 
+web_ir_year_na <- web_ir %>%
+  reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>%
   as_tibble() %>%
-  pivot_longer(-year, names_to = "index", values_to = "perc_na") %>% 
+  pivot_longer(-year, names_to = "index", values_to = "perc_na") %>%
   arrange(year, perc_na) %>%
-  select(index, year, perc_na) %>% 
+  select(index, year, perc_na) %>%
   pivot_wider(names_from = year, values_from = perc_na)
 
-write_csv(web_ir, "work/romania/web_ir.csv")
-write_parquet(web_ir, "work/romania/web_ir.parquet")
-#WEB_UU--------------------------------------
-files <- dir_ls("work/romania", regexp = "UU")
-web_uu <- map(files, read_csv_cc) %>% 
-  set_names(basename) %>% 
-  list_rbind(names_to = "filename") %>% 
-  mutate(year = str_extract(filename, "\\d+")) %>% 
-  select(year, cui:patrimoniul_regiei) %>% 
+write_csv(web_ir, "work/web_ir.csv")
+write_parquet(web_ir, "work/web_ir.parquet")
+# WEB_UU--------------------------------------
+files <- dir_ls("work/rom_txt", regexp = "uu")
+web_uu <- map(files, read_csv_cc) %>%
+  set_names(basename) %>%
+  list_rbind(names_to = "filename") %>%
+  mutate(year = str_extract(filename, "\\d+"), , source = "UU") %>%
+  select(year, source, cui:patrimoniul_regiei) %>%
   distinct()
 
 web_uu_na <- web_uu %>%
-  map_dfr(~ sum(is.na(.))) %>% 
+  map_dfr(~ sum(is.na(.))) %>%
   pivot_longer(everything()) %>%
-  mutate(perc_na = round(value / nrow(web_uu) * 100, 2)) %>% 
+  mutate(perc_na = round(value / nrow(web_uu) * 100, 2)) %>%
   arrange(perc_na)
 
-web_uu_year_na <- web_uu %>% 
-  reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>% 
+web_uu_year_na <- web_uu %>%
+  reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>%
   as_tibble() %>%
-  pivot_longer(-year, names_to = "index", values_to = "perc_na") %>% 
+  pivot_longer(-year, names_to = "index", values_to = "perc_na") %>%
   arrange(year, perc_na) %>%
-  select(index, year, perc_na) %>% 
+  select(index, year, perc_na) %>%
   pivot_wider(names_from = year, values_from = perc_na)
 
-write_csv(web_uu, "work/romania/web_uu.csv")
-write_parquet(web_uu, "work/romania/web_uu.parquet")
+write_csv(web_uu, "work/web_uu.csv")
+write_parquet(web_uu, "work/web_uu.parquet")
 #---------------------------------------------------
-#CSVs
+# CSVs
 # read_csv_rn <- function(file){
 #   read_csv(file, col_names = F)
 # }
-# 
+#
 # files <- dir_ls("work/rom_csvs", regexp = "bl")
-# csv_bl <- map(files, read_csv_rn) %>% 
-#   set_names(basename) %>% 
-#   list_rbind(names_to = "filename") %>% 
-#   mutate(year = str_extract(filename, "\\d+")) %>% 
+# csv_bl <- map(files, read_csv_rn) %>%
+#   set_names(basename) %>%
+#   list_rbind(names_to = "filename") %>%
+#   mutate(year = str_extract(filename, "\\d+")) %>%
 #   select(year, X1)
-# 
+#
 # csv_ir %>% count(year)
-#   
+#
 # files <- dir_ls("work/rom_csvs", regexp = "ir")
-# csv_ir <- map(files, read_csv_rn) %>% 
-#   set_names(basename) %>% 
-#   list_rbind(names_to = "filename") %>% 
-#   mutate(year = str_extract(filename, "\\d+")) %>% 
+# csv_ir <- map(files, read_csv_rn) %>%
+#   set_names(basename) %>%
+#   list_rbind(names_to = "filename") %>%
+#   mutate(year = str_extract(filename, "\\d+")) %>%
 #   select(year, X1)
-# 
+#
 # files <- dir_ls("work/rom_csvs", regexp = "UUuu")
-# csv_uu <- map(files, read_csv) %>% 
-#   set_names(basename) %>% 
-#   list_rbind(names_to = "filename") %>% 
-#   mutate(year = str_extract(filename, "\\d+")) %>% 
-#   select(year, CUI:I20) %>% 
+# csv_uu <- map(files, read_csv) %>%
+#   set_names(basename) %>%
+#   list_rbind(names_to = "filename") %>%
+#   mutate(year = str_extract(filename, "\\d+")) %>%
+#   select(year, CUI:I20) %>%
 #   distinct()
 #------------------------------
-# WEB_BL_BS_SL_AN2024 <- read_csv("https://data.gov.ro/dataset/d3caacb6-2c08-445e-94e6-8d36d00ab250/resource/b9f399d8-b641-4a23-9de7-a1dd4427b4b0/download/web_bl_bs_sl_an2024.csv",
+library(curl)
+multi_download(links_bl)
+curl_download(
+  "https://data.gov.ro/dataset/d3caacb6-2c08-445e-94e6-8d36d00ab250/resource/f89140dc-20dd-494f-912a-d1a482188885/download/web_bl_bs_sl_an2024.txt",
+  "work/bl_2024.txt"
+)
+#
+# links_bl <- c("https://data.gov.ro/dataset/d3caacb6-2c08-445e-94e6-8d36d00ab250/resource/f89140dc-20dd-494f-912a-d1a482188885/download/web_bl_bs_sl_an2024.txt",
+#               "https://data.gov.ro/dataset/7861a98f-4d5c-4faa-90d4-8e934ebd1782/resource/5ed47b6f-f8a2-4ca8-a272-692aff4fe9e4/download/web_bl_bs_sl_an2023.txt",
+#               "https://data.gov.ro/dataset/aa2567a4-e7d7-4e6e-ab19-d08d39f99996/resource/b35fab04-f101-42d7-a765-8f41728b373a/download/web_bl_bs_sl_an2022.txt",
+#               "https://data.gov.ro/dataset/f8353c0e-fee9-4aa3-b26d-be0e96c328a7/resource/d0a42232-5aa0-425a-b264-67184e8ded5f/download/web_bl_bs_sl_an2021.txt",
+#               "https://data.gov.ro/dataset/e977e5b9-0a1f-46ac-8cb8-f856a011a8ed/resource/00618bb2-b8b7-4861-95f0-184871aab230/download/web_bl_bs_sl_an2020.txt",
+#               "https://data.gov.ro/dataset/0be1e2aa-8399-4cfc-beab-bf516fcc8f16/resource/983c2a11-360c-4e42-a441-2ab13310592d/download/web_bl_bs_sl_an2019.txt",
+#               "https://data.gov.ro/dataset/a9c6dd10-dee2-46e9-aa3f-58dea0e50396/resource/aa694624-d14a-4cc9-9a09-9eaa7c97a0ab/download/webblbsslan2018.txt",
+#               "https://data.gov.ro/dataset/f3c94174-4991-4d25-b183-663370908de3/resource/b00a63a0-4916-459a-a5d8-34cc68d34e86/download/webblbsslan2017.txt",
+#               "https://data.gov.ro/dataset/e6274edc-fe36-4a79-ba73-c05711b70d80/resource/a71a4687-84eb-4d5d-a315-3dc38f4ea97f/download/webblbsslan2016.txt",
+#               "https://data.gov.ro/dataset/6a021146-6a0d-4262-8b0e-2b43aa79bca7/resource/098a544a-2ced-418c-ac93-f72b4a8c1c5a/download/webblbsslan2015.txt",
+#               "https://data.gov.ro/dataset/77ea3bbe-a533-4db0-8647-d380a75a39b5/resource/5563f94a-8ca3-4739-8036-75ed9bb386aa/download/webblbsslan2014.txt"
+#               )
+
+# WEB_BL_BS_SL_AN2024 <- read_csv("https://data.gov.ro/dataset/d3caacb6-2c08-445e-94e6-8d36d00ab250/resource/f89140dc-20dd-494f-912a-d1a482188885/download/web_bl_bs_sl_an2024.txt",
 #                                 col_types = "cc")
 # WEB_IR_2024 <- read_csv("https://data.gov.ro/dataset/d3caacb6-2c08-445e-94e6-8d36d00ab250/resource/a800aa00-e75e-402c-ae58-7746e224d1d7/download/web_ir_an2024.txt",
 #                         col_types = "cc")

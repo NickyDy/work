@@ -1,17 +1,39 @@
 library(tidyverse)
 library(nanoparquet)
 library(fs)
+library(readxl)
 options(scipen = 100)
 
-web_bl <- read_parquet("work/web_bl.parquet")
-web_ir <- read_parquet("work/web_ir.parquet")
-web_uu <- read_parquet("work/web_uu.parquet")
+romania <- read_parquet("work/parquet/romania.parquet")
 
-web <- bind_rows(web_bl, web_ir, web_uu)
+glimpse(food_drink)
 
-glimpse(web)
+agents <- read_excel("work/20250821-ro-tour-agents_v1.xlsx", skip = 6) %>% janitor::clean_names()
+hotels <- read_excel("work/20250821-ro-tour-hotels_v1.xlsx", skip = 6) %>% janitor::clean_names()
+food_drink <- read_excel("work/20250821-ro-tour-food-drink_v1.xlsx", skip = 6) %>% janitor::clean_names()
 
-web_year_na <- web %>%
+food_drink %>% count(no_of_seats, sort = T) %>% view
+
+agents_count <- agents %>% count(`Unique Registration code`, sort = T) %>% drop_na()
+hotels_count <- hotels %>% count(`Unique Registration code`, sort = T) %>% drop_na() %>% 
+  filter(`Unique Registration code` != "#N/A")
+food_drink_count <- food_drink %>% count(`Unique Registration Code`, sort = T) %>% drop_na() %>% 
+  filter(`Unique Registration Code` != "#N/A")
+
+romania_join <- romania %>% 
+  filter(year == 2021) %>% select(year, cui, employees, nace2)
+
+agents_joined <- agents_count %>% left_join(romania_join, by = c("Unique Registration code" = "cui"))
+hotels_joined <- hotels_count %>% left_join(romania_join, by = c("Unique Registration code" = "cui"))
+food_drink_joined <- food_drink_count %>% left_join(romania_join, by = c("Unique Registration Code" = "cui"))
+
+agents_joined_na <- agents_joined %>%
+  map_dfr(~ sum(is.na(.))) %>%
+  pivot_longer(everything()) %>%
+  mutate(perc_na = round(value / nrow(web_bl) * 100, 2)) %>%
+  arrange(perc_na)
+#----------------------
+romania_year_na <- romania %>%
   reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>%
   as_tibble() %>%
   pivot_longer(-year, names_to = "index", values_to = "perc_na") %>%
@@ -19,12 +41,12 @@ web_year_na <- web %>%
   select(index, year, perc_na) %>%
   pivot_wider(names_from = year, values_from = perc_na)
 
-web_bl %>%
+romania_bl %>%
   count(ro_pat_reg, cui) %>%
   view()
 
-write_csv(web, "work/romania.csv")
-write_parquet(web, "work/romania.parquet")
+write_csv(food_drink_joined, "work/food_drink_joined_2021.csv")
+write_parquet(romania, "work/romania.parquet")
 
 plot_cui("1108044")
 

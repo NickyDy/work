@@ -2,8 +2,8 @@ library(tidyverse)
 library(nanoparquet)
 options(scipen = 100)
 
-rps <- read_parquet("work/rps.parquet")
-rgfi <- read_parquet("work/rgfi.parquet")
+rps <- read_parquet("work/parquet/rps.parquet")
+rgfi <- read_parquet("work/parquet/rgfi.parquet")
 
 comp <- rgfi %>% 
   select(pla_13, pla_11, liabilities_a7) %>% 

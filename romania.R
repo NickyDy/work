@@ -2,11 +2,12 @@ library(tidyverse)
 library(nanoparquet)
 library(fs)
 library(readxl)
+
 options(scipen = 100)
 
 romania <- read_parquet("work/parquet/romania.parquet")
 
-glimpse(food_drink)
+glimpse(romania)
 
 agents <- read_excel("work/20250821-ro-tour-agents_v1.xlsx", skip = 6) %>% janitor::clean_names()
 hotels <- read_excel("work/20250821-ro-tour-hotels_v1.xlsx", skip = 6) %>% janitor::clean_names()
@@ -41,20 +42,20 @@ romania_year_na <- romania %>%
   select(index, year, perc_na) %>%
   pivot_wider(names_from = year, values_from = perc_na)
 
-romania_bl %>%
-  count(ro_pat_reg, cui) %>%
+romania %>%
+  count(cui) %>%
   view()
 
 write_csv(food_drink_joined, "work/food_drink_joined_2021.csv")
 write_parquet(romania, "work/romania.parquet")
 
-plot_cui("1108044")
+plot_cui("10016179")
 
 plot_cui <- function(number) {
-  title <- web_bl %>%
+  title <- romania %>%
     filter(cui == number)
 
-  web_bl %>%
+  romania %>%
     filter(cui == number) %>%
     pivot_longer(assets_b:employees) %>%
     drop_na() %>%
@@ -94,6 +95,7 @@ web_bl_year_na <- web_bl %>%
 
 write_csv(web_bl, "work/web_bl.csv")
 write_parquet(web_bl, "work/web_bl.parquet")
+
 # WEB_IR--------------------------------------
 files <- dir_ls("work/rom_txt", regexp = "ir")
 web_ir <- map(files, read_csv_cc) %>%
@@ -119,6 +121,7 @@ web_ir_year_na <- web_ir %>%
 
 write_csv(web_ir, "work/web_ir.csv")
 write_parquet(web_ir, "work/web_ir.parquet")
+
 # WEB_UU--------------------------------------
 files <- dir_ls("work/rom_txt", regexp = "uu")
 web_uu <- map(files, read_csv_cc) %>%

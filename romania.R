@@ -2,7 +2,6 @@ library(tidyverse)
 library(nanoparquet)
 library(fs)
 library(readxl)
-
 options(scipen = 100)
 
 romania <- read_parquet("work/parquet/romania.parquet")

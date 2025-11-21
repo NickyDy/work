@@ -6,7 +6,7 @@ options(scipen = 100)
 
 romania <- read_parquet("work/parquet/romania.parquet")
 
-glimpse(romania)
+glimpse(agents)
 
 agents <- read_excel("work/20250821-ro-tour-agents_v1.xlsx", skip = 6) %>% janitor::clean_names()
 hotels <- read_excel("work/20250821-ro-tour-hotels_v1.xlsx", skip = 6) %>% janitor::clean_names()
@@ -14,18 +14,18 @@ food_drink <- read_excel("work/20250821-ro-tour-food-drink_v1.xlsx", skip = 6) %
 
 food_drink %>% count(no_of_seats, sort = T) %>% view
 
-agents_count <- agents %>% count(`Unique Registration code`, sort = T) %>% drop_na()
-hotels_count <- hotels %>% count(`Unique Registration code`, sort = T) %>% drop_na() %>% 
-  filter(`Unique Registration code` != "#N/A")
-food_drink_count <- food_drink %>% count(`Unique Registration Code`, sort = T) %>% drop_na() %>% 
-  filter(`Unique Registration Code` != "#N/A")
+agents_count <- agents %>% count(unique_registration_code, sort = T) %>% drop_na()
+hotels_count <- hotels %>% count(unique_registration_code, sort = T) %>% drop_na() %>% 
+  filter(unique_registration_code != "#N/A")
+food_drink_count <- food_drink %>% count(unique_registration_code, sort = T) %>% drop_na() %>% 
+  filter(unique_registration_code != "#N/A")
 
 romania_join <- romania %>% 
   filter(year == 2021) %>% select(year, cui, employees, nace2)
 
-agents_joined <- agents_count %>% left_join(romania_join, by = c("Unique Registration code" = "cui"))
-hotels_joined <- hotels_count %>% left_join(romania_join, by = c("Unique Registration code" = "cui"))
-food_drink_joined <- food_drink_count %>% left_join(romania_join, by = c("Unique Registration Code" = "cui"))
+agents_joined <- agents_count %>% left_join(romania_join, by = c("unique_registration_code" = "cui"))
+hotels_joined <- hotels_count %>% left_join(romania_join, by = c("unique_registration_code" = "cui"))
+food_drink_joined <- food_drink_count %>% left_join(romania_join, by = c("unique_registration_code" = "cui"))
 
 agents_joined_na <- agents_joined %>%
   map_dfr(~ sum(is.na(.))) %>%

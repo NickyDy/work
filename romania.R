@@ -6,7 +6,7 @@ options(scipen = 100)
 
 romania <- read_parquet("work/parquet/romania.parquet")
 
-glimpse(agents)
+glimpse(romania)
 
 agents <- read_excel("work/20250821-ro-tour-agents_v1.xlsx", skip = 6) %>% janitor::clean_names()
 hotels <- read_excel("work/20250821-ro-tour-hotels_v1.xlsx", skip = 6) %>% janitor::clean_names()

@@ -27,10 +27,10 @@ agents_joined <- agents_count %>% left_join(romania_join, by = c("unique_registr
 hotels_joined <- hotels_count %>% left_join(romania_join, by = c("unique_registration_code" = "cui"))
 food_drink_joined <- food_drink_count %>% left_join(romania_join, by = c("unique_registration_code" = "cui"))
 
-agents_joined_na <- agents_joined %>%
+romania_na <- romania %>%
   map_dfr(~ sum(is.na(.))) %>%
   pivot_longer(everything()) %>%
-  mutate(perc_na = round(value / nrow(web_bl) * 100, 2)) %>%
+  mutate(perc_na = round(value / nrow(romania) * 100, 2)) %>%
   arrange(perc_na)
 #----------------------
 romania_year_na <- romania %>%

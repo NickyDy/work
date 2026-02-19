@@ -22,15 +22,15 @@ imputed[["ximp"]] %>% miss_var_summary() %>% print(n = Inf)
 
 romania_imputed <- imputed[["ximp"]] %>% view
 
-library(tidymodels)
-romania %>% miss_var_summary() %>% print(n = Inf)
-
-impute_knn <- recipe(year + cui + source + nace2 + liabilities_f + liabilities_a ~ ., data = romania) %>%
-  step_impute_knn(all_predictors())
-
-impute_bag <- recipe(year + cui + source + nace2 + liabilities_f + liabilities_a ~ ., data = romania) %>%
-  step_impute_bag(all_predictors())
-
-imputed <- prep(impute_knn) %>% bake(new_data = NULL)
-
-imputed %>% miss_var_summary() %>% print(n = Inf)
+# library(tidymodels)
+# romania %>% miss_var_summary() %>% print(n = Inf)
+# 
+# impute_knn <- recipe(year + cui + source + nace2 + liabilities_f + liabilities_a ~ ., data = romania) %>%
+#   step_impute_knn(all_predictors())
+# 
+# impute_bag <- recipe(year + cui + source + nace2 + liabilities_f + liabilities_a ~ ., data = romania) %>%
+#   step_impute_bag(all_predictors())
+# 
+# imputed <- prep(impute_knn) %>% bake(new_data = NULL)
+# 
+# imputed %>% miss_var_summary() %>% print(n = Inf)

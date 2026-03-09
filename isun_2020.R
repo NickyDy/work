@@ -21,6 +21,7 @@ projects_df <- read_parquet("work/parquet/projects_df.parquet") %>% janitor::cle
 programs <- read_parquet("work/parquet/programs.parquet")
 contracts <- read_parquet("work/parquet/contracts.parquet")
 entities <- read_parquet("work/parquet/entities.parquet")
+projects <- read_parquet("work/parquet/projects.parquet")
 
 glimpse(entities)
 

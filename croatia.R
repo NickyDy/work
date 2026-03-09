@@ -2,8 +2,8 @@ library(tidyverse)
 library(nanoparquet)
 options(scipen = 100)
 
+croatia <- read_parquet("work/parquet/croatia.parquet")
 rps <- read_parquet("work/parquet/rps.parquet")
-rgfi <- read_parquet("work/parquet/rgfi.parquet")
 
 comp <- rgfi %>% 
   select(pla_13, pla_11, liabilities_a7) %>% 
@@ -12,6 +12,7 @@ comp <- rgfi %>%
 rps %>% filter(mb == 3586243, rb == 0000) %>% view
 
 glimpse(rps)
+
 rps %>% count(rb, mb, sort = T) %>% view
 
 rgfi_year_na <- rgfi %>% 
@@ -28,16 +29,17 @@ df_na <- df %>%
   mutate(perc_na = round(value / nrow(rgfi) * 100, 2)) %>% 
   arrange(perc_na)
 
-rgfi %>% 
+croatia %>%
   #mutate(mb = paste0("00", mb)) %>% 
-  filter(mb == "1968823") %>%
+  filter(mb == "123455") %>%
   pivot_longer(-c(1:4)) %>% 
   drop_na(value) %>% 
-  ggplot(aes(dat_predaje, value)) +
-  geom_line() +
+  ggplot(aes(dat_predaje, value, group = name)) +
+  geom_line(linetype = 2, linewidth = 0.3) +
   geom_point() +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
-  facet_wrap(vars(name), scales = "free_y", ncol = 5)
+  facet_wrap(vars(name), scales = "free_y", ncol = 5) +
+  labs(x = "Година", y = "Стойност")
 #------------------------------------------
 df %>% count(oib, sort = T)
 

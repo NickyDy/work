@@ -1,8 +1,8 @@
 library(tidyverse)
 library(nanoparquet)
 
-estonia <- read_parquet("~/Desktop/R/work/estonia.parquet")
-finance <- read_parquet("~/Desktop/R/work/finance.parquet")
+estonia <- read_parquet("work/parquet/estonia.parquet")
+finance <- read_parquet("work/parquet/finance.parquet")
 
 glimpse(estonia)
 

@@ -48,7 +48,7 @@ romania %>%
 write_csv(food_drink_joined, "work/food_drink_joined_2021.csv")
 write_parquet(romania, "work/romania.parquet")
 
-plot_cui("10016179")
+plot_cui("10000733")
 
 plot_cui <- function(number) {
   title <- romania %>%
@@ -63,7 +63,8 @@ plot_cui <- function(number) {
     geom_point(show.legend = F) +
     geom_line(linetype = 2, linewidth = 0.2) +
     labs(title = paste0("CUI: ", unique(title$cui))) +
-    facet_wrap(vars(name), scales = "free_y", ncol = 3)
+    facet_wrap(vars(name), scales = "free_y", ncol = 4) +
+    labs(x = "Година", y = "Стойност")
 }
 
 read_csv_cc <- function(file) {

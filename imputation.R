@@ -2,26 +2,42 @@ library(tidyverse)
 library(nanoparquet)
 library(naniar)
 
-options(scipen = 100)
-
-romania <- read_parquet("work/parquet/romania.parquet") %>% 
-  slice_sample(n = 1000) %>% 
+# Прочитане и филтриране на данните
+romania <- read_parquet("romania.parquet") %>% 
+  filter(year == "2014") %>%
   mutate(across(where(is.character), as.factor))
 
+# Общ поглед върху данните
 glimpse(romania)
+
+# Липсващи данни преди изчислението
+romania %>% miss_var_summary() %>% 
+  arrange(n_miss) %>% print(n = Inf)
 
 library(missForest)
 library(doParallel)
-registerDoParallel(4)
 
-romania %>% miss_var_summary() %>% print(n = Inf)
+# Брой ядра на процесора, които да се използват в изчислението
+registerDoParallel(4) 
 
-imputed <- missForest(romania, parallelize = "forests", verbose = TRUE)
+# Изчисление на липсващите данни
+imputed <- missForest(romania, 
+                      parallelize = "forests", 
+                      verbose = TRUE)
 
-imputed[["ximp"]] %>% miss_var_summary() %>% print(n = Inf)
+# Липсващи данни след изчислението
+imputed %>% pluck("ximp") %>% 
+  miss_var_summary() %>% arrange(n_miss) %>% 
+  print(n = Inf)
 
-romania_imputed <- imputed[["ximp"]] %>% view
+# Преглед на изчислените данни
+romania_imputed <- imputed %>% pluck("ximp")
+romania_imputed %>% view
 
+# Запазване на изчислените данни
+write_parquet(romania_imputed, "romania_2014.parquet")
+
+#====================
 # library(tidymodels)
 # romania %>% miss_var_summary() %>% print(n = Inf)
 # 

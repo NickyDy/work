@@ -3,15 +3,36 @@ library(nanoparquet)
 library(naniar)
 
 # Прочитане и филтриране на данните
-romania <- read_parquet("romania.parquet") %>% 
-  filter(year == "2014") %>%
+romania <- read_parquet("work/parquet/romania.parquet") %>% 
   mutate(across(where(is.character), as.factor))
 
 # Общ поглед върху данните
 glimpse(romania)
 
+romania %>% 
+  filter(year == "2024") %>%
+  select(assets_c4, assets_c, liabilities_a1, pla_11l, pla_13l,
+         pla_13p, pla_11p, liabilities_a, net_turnover, pla_9,
+         pla_10, assets_c2, assets_b, employees, assets_c1,
+         liabilities_f) %>%
+  drop_na() %>% 
+  cor() %>% round(3) %>% as.data.frame() %>% 
+  rownames_to_column(var = "variables (2024)") %>% 
+  as_tibble()
+
+romania %>% 
+  select(cui, year, liabilities_f) %>% 
+  pivot_wider(names_from = year, values_from = liabilities_f) %>% 
+  select(-cui) %>% 
+  drop_na() %>% 
+  cor() %>% round(3) %>% as.data.frame() %>% 
+  rownames_to_column(var = "liabilities_f") %>% 
+  as_tibble()
+
 # Липсващи данни преди изчислението
-romania %>% miss_var_summary() %>% 
+romania %>% 
+  #filter(year == "2015") %>%
+  miss_var_summary() %>% 
   arrange(n_miss) %>% print(n = Inf)
 
 library(missForest)

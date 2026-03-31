@@ -27,19 +27,20 @@ agents_joined <- agents_count %>% left_join(romania_join, by = c("unique_registr
 hotels_joined <- hotels_count %>% left_join(romania_join, by = c("unique_registration_code" = "cui"))
 food_drink_joined <- food_drink_count %>% left_join(romania_join, by = c("unique_registration_code" = "cui"))
 
-romania_na <- romania %>%
+romania %>%
   map_dfr(~ sum(is.na(.))) %>%
   pivot_longer(everything()) %>%
   mutate(perc_na = round(value / nrow(romania) * 100, 2)) %>%
-  arrange(perc_na)
+  arrange(perc_na) %>% print(n = Inf)
 #----------------------
-romania_year_na <- romania %>%
+romania %>%
   reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>%
   as_tibble() %>%
   pivot_longer(-year, names_to = "index", values_to = "perc_na") %>%
   arrange(year, perc_na) %>%
   select(index, year, perc_na) %>%
-  pivot_wider(names_from = year, values_from = perc_na)
+  pivot_wider(names_from = year, values_from = perc_na) %>% 
+  print(n = Inf)
 
 romania %>%
   count(cui) %>%

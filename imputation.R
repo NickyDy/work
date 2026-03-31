@@ -30,7 +30,7 @@ romania %>%
   as_tibble()
 
 # Липсващи данни преди изчислението
-romania %>% 
+slovenia_23_25 %>% 
   #filter(year == "2015") %>%
   miss_var_summary() %>% 
   arrange(n_miss) %>% print(n = Inf)

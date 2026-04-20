@@ -11,15 +11,22 @@ read_excel_col <- function(file){
                                  "total_debt", "total_equity"), skip = 7, na = "NA")
 }
 
+read_excel_names <- function(file){
+  read_excel(file, skip = 4, na = "NA") %>% 
+    slice(-c(1:2)) %>% 
+    janitor::clean_names()
+}
+
 files <- dir_ls("~/Downloads", regexp = "xlsx")
-df <- map(files, read_excel_col) %>%
+df <- map(files, read_excel_names) %>%
   set_names(basename) %>%
   list_rbind(names_to = "year") %>%
-  mutate(year = str_remove(year, "^portugal_")) %>% 
-  mutate(year = str_remove(year, "^portugal2_")) %>% 
-  mutate(year = str_remove(year, ".xlsx$"))
+  mutate(year = str_extract(year, "\\d+")) %>% 
+  mutate(across(1:6, as.character)) %>% 
+  mutate(across(-c(1:6), as.numeric)) %>% 
+  mutate(across(where(is.numeric), \(x) round(x, 2)))
 
-glimpse(portugal)
+glimpse(df)
 portugal %>%
   drop_na(total_rev, net_inc, total_assets, 
           total_debt, total_equity) %>% 
@@ -48,14 +55,14 @@ plot_id <- function(number) {
     theme(text = element_text(size = 16))
 }
 
-portugal %>%
+df %>%
   map_dfr(~ sum(is.na(.))) %>%
   pivot_longer(everything()) %>%
-  mutate(perc_na = round(value / nrow(portugal) * 100, 2)) %>%
+  mutate(perc_na = round(value / nrow(df) * 100, 2)) %>%
   arrange(perc_na) %>% 
   print(n = Inf)
 
-portugal %>%
+df %>%
   reframe(across(everything(), ~ round(sum(is.na(.) / n() * 100), 3)), .by = year) %>%
   as_tibble() %>%
   pivot_longer(-year, names_to = "index", values_to = "perc_na") %>%
